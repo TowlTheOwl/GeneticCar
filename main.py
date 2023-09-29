@@ -9,22 +9,34 @@ TODO:
 2. Make the screen size scalable
 """
 def main():
+    DEFAULT_WINDOW_SIZE = (1920, 1080)
+    if screensize == -1:
+        WINDOW_SIZE = DEFAULT_WINDOW_SIZE
+        windowScale = 1
+    else:
+        windowScale = screensize/DEFAULT_WINDOW_SIZE[0]
+        WINDOW_SIZE = [i * windowScale for i in DEFAULT_WINDOW_SIZE]
+    WIN = pygame.display.set_mode(WINDOW_SIZE)
+    pygame.display.set_caption("AUTOCAR")
+
+
     tracks = {
         "default": {
             "img": r"images/track_defualt.png",
-            "pos": [850, 820],
+            "pos": (850, 820),
             "border": (255, 255, 255, 255),
             "finish": (255, 255, 0, 255)
         },
     }
 
-    WINDOW_SIZE = (1920, 1080)
-    WIN = pygame.display.set_mode(WINDOW_SIZE)
-    pygame.display.set_caption("AUTOCAR")
-
-    chosen_track = "default"
+    userTrackChoice = ""
+    tracks_keys = tracks.keys()
+    while userTrackChoice not in tracks_keys:
+        userTrackChoice = input(f"Choose a track: \n{tracks.keys()}\n>")
+    chosen_track = userTrackChoice
 
     TRACK = pygame.image.load(tracks[chosen_track]["img"]).convert()
+    TRACK = pygame.transform.scale(TRACK, WINDOW_SIZE)
 
     FPS = 60
 
@@ -36,11 +48,11 @@ def main():
 
     # font setup
     pygame.font.init()
-    font1 = pygame.font.Font('fonts\BebasNeue-Regular.ttf', 70)
-    font2 = pygame.font.Font('fonts\BebasNeue-Regular.ttf', 50)
+    font1 = pygame.font.Font('fonts\BebasNeue-Regular.ttf', int(70*windowScale))
+    font2 = pygame.font.Font('fonts\BebasNeue-Regular.ttf', int(50*windowScale))
 
     # car setup
-    car_size = (60, 30)
+    car_size = (int(60*windowScale), int(30*windowScale))
 
     spawn_point = tracks[chosen_track]["pos"]
     car_num = 5
@@ -53,8 +65,20 @@ def main():
 
     cars = ()
 
+    start_pos = tuple([i * windowScale for i in spawn_point])
+
+    size = car_size
+    start_vel = 4*windowScale
+    max_vel = 10 * windowScale
+    min_vel = 2 * windowScale
+    rot_vel = 0.04 * windowScale
+    acc = 0.1 * windowScale
+    scan_length = int(300*windowScale)
+
+    # start_pos:tuple, size:tuple, mr:float, nn_size:tuple, start_vel:float, max_vel:float, min_vel:float, rot_vel:float, acc:float, bias_term:int, num_sensors:int=5, sensor_angle=math.pi
+
     for i in range(car_num):
-        new_car = Car(spawn_point, car_size, mutation_rate, car_nn_size, 4, 10, 1, 0.04, 0.1, 1, 5, math.pi)
+        new_car = Car(spawn_point, car_size, mutation_rate, car_nn_size, start_vel, max_vel, min_vel, rot_vel, acc, 1, scan_length, 5, math.pi)
         cars += (new_car, )
 
     clock = pygame.time.Clock()
@@ -109,4 +133,5 @@ def main():
     pygame.quit()
 
 if __name__ == "__main__":
+    screensize = int(input("Enter screen size (-1 for default): "))
     main()
