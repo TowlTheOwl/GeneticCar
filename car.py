@@ -16,7 +16,7 @@ keep_weight: whether the car survived or not
 
 class Car:
     def __init__(self, start_pos:tuple, size:tuple, mr:float, nn_size:tuple, start_vel:float, max_vel:float, 
-                 min_vel:float, rot_vel:float, acc:float, bias_term:int, num_sensors:int=5, sensor_angle=math.pi) -> None:
+                 min_vel:float, rot_vel:float, acc:float, bias_term:int,  scan_length:int, num_sensors:int=5, sensor_angle=math.pi) -> None:
         
         self.start_pos = start_pos
         self.pos = start_pos
@@ -30,6 +30,7 @@ class Car:
             self.sensor_angles += ((i, -sensor_angle/2 + sensor_angle/(num_sensors-1)*i),)
         self.age = 0
         self.theta_diag = math.atan(size[1] / size[0])
+        self.scan_length = scan_length
 
         # neural network
         self.command = np.zeros(4, dtype=bool)
@@ -187,7 +188,7 @@ class Car:
         x = int(self.center[0] + math.cos(math.pi*2 - (self.angle+angle)) * length)
         y = int(self.center[1] + math.sin(math.pi*2 - (self.angle+angle)) * length)
 
-        while not track.get_at((x, y)) == border_color and length < 300:
+        while not track.get_at((x, y)) == border_color and length < self.scan_length:
             length += 1
             x = int(self.center[0] + math.cos(math.pi*2 - (self.angle+angle)) * length)
             y = int(self.center[1] + math.sin(math.pi*2 - (self.angle+angle)) * length)
