@@ -87,18 +87,18 @@ class Car:
         # output = array with 4 elements, the max values gets executed
 
         # initialize/mutate neural network
-        prev_weight = self.weights
-        num_weights = 0
-        for i in range(len(self.nn_size)-1):
-            num_weights += (self.nn_size[i]+self.bias_term) * self.nn_size[i+1]
         
         if rand or parent_weight is None:
+            prev_weight = self.weights
+            num_weights = 0
+            for i in range(len(self.nn_size)-1):
+                num_weights += (self.nn_size[i]+self.bias_term) * self.nn_size[i+1]
             self.weights = np.random.uniform(-1, 1, size=(num_weights,))
 
         else:
             parent_weight_copy = parent_weight.copy()
             if mode == 1:
-                parent_weight_copy += (np.random.uniform(-1, 1, size=parent_weight_copy.shape) * self.mr)
+                parent_weight_copy = parent_weight_copy+(np.random.uniform(-1, 1, size=parent_weight_copy.shape) * self.mr)
             
     def draw(self, win):
         rect = self.image.get_rect(center=self.sprite_image.get_rect(topleft=self.pos).center)
@@ -241,13 +241,14 @@ class Car:
         
         self.draw(win)
 
-    def reset(self, eliminate=False):
+    def reset(self, eliminate=False, parent_weight=None):
         self.pos = self.start_pos
         self.update_center_pos()
         if not eliminate:
             self.age += 1
         else:
             self.age = 0
+            self.init_weight(parent_weight)
 
         self.angle = 0
         self.vel = self.start_vel
