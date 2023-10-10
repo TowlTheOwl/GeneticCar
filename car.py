@@ -98,7 +98,7 @@ class Car:
         else:
             parent_weight_copy = parent_weight.copy()
             if mode == 1:
-                parent_weight_copy = parent_weight_copy+(np.random.uniform(-1, 1, size=parent_weight_copy.shape) * self.mr)
+                self.weights = parent_weight_copy+(np.random.uniform(-1, 1, size=parent_weight_copy.shape) * self.mr)
             
     def draw(self, win):
         rect = self.image.get_rect(center=self.sprite_image.get_rect(topleft=self.pos).center)
