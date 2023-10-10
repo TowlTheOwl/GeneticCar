@@ -58,7 +58,7 @@ def main():
     car_num = 5
 
     gen = 1
-    mutation_rate = 1.5
+    mutation_rate = 0.2
     num_survive = 1
 
     car_nn_size = (5, 5, 4)
@@ -125,8 +125,13 @@ def main():
 
         if not any(cars_status):
             gen += 1
-            for car in cars:
-                car.reset(False)
+            bestCar = cars_dist.index(max(cars_dist))
+            bestCarWeight = cars[bestCar].return_weights()
+            for carIndex in range(len(cars)):
+                if carIndex != bestCar:
+                    cars[carIndex].reset(True, bestCarWeight)
+                else:
+                    cars[carIndex].reset(False)
         clock.tick(fps)
         pygame.display.flip()
 
