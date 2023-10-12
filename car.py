@@ -227,13 +227,13 @@ class Car:
             for i in range(len(self.command)):
                 if self.command[i]:
                     self.actions[i]()
+            
+            # move
+            self.move(track, border_color, finish_color)
 
             # update variables
             self.image = pygame.transform.rotate(self.sprite_image, math.degrees(self.angle))
             self.update_center_pos()
-
-            # move
-            self.move(track, border_color, finish_color)
 
             # draw radar
             if show_radar:
