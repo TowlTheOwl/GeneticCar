@@ -27,6 +27,12 @@ def main():
             "border": (255, 255, 255, 255),
             "finish": (255, 255, 0, 255)
         },
+        "hard": {
+            "img": r"images/track_hard.png",
+            "pos": (850, 820),
+            "border": (255, 255, 255, 255),
+            "finish": (255, 255, 0, 255)
+        },
     }
 
     userTrackChoice = ""
@@ -55,7 +61,7 @@ def main():
     car_size = (int(60*windowScale), int(30*windowScale))
 
     spawn_point = tracks[chosen_track]["pos"]
-    car_num = 5
+    car_num = 10
 
     gen = 1
     mutation_rate = 0.2
