@@ -23,13 +23,13 @@ def main():
     tracks = {
         "default": {
             "img": r"images/track_defualt.png",
-            "pos": (850, 820),
+            "pos": (850, 835),
             "border": (255, 255, 255, 255),
             "finish": (255, 255, 0, 255)
         },
         "hard": {
             "img": r"images/track_hard.png",
-            "pos": (850, 820),
+            "pos": (850, 835),
             "border": (255, 255, 255, 255),
             "finish": (255, 255, 0, 255)
         },
@@ -43,6 +43,7 @@ def main():
 
     TRACK = pygame.image.load(tracks[chosen_track]["img"]).convert()
     TRACK = pygame.transform.scale(TRACK, WINDOW_SIZE)
+    WIN.blit(TRACK, (0, 0))
 
     FPS = 60
 
@@ -71,7 +72,7 @@ def main():
 
     cars = ()
 
-    start_pos = tuple([i * windowScale for i in spawn_point])
+    start_pos = tuple([int(i * windowScale) for i in spawn_point])
 
     size = car_size
     start_vel = 4*windowScale
@@ -81,10 +82,14 @@ def main():
     acc = 0.1 * windowScale
     scan_length = int(300*windowScale)
 
+    
+    pygame.display.flip()
+    input("Ready?")
+
     # start_pos:tuple, size:tuple, mr:float, nn_size:tuple, start_vel:float, max_vel:float, min_vel:float, rot_vel:float, acc:float, bias_term:int, num_sensors:int=5, sensor_angle=math.pi
 
     for i in range(car_num):
-        new_car = Car(spawn_point, car_size, mutation_rate, car_nn_size, start_vel, max_vel, min_vel, rot_vel, acc, 1, scan_length, 5, math.pi)
+        new_car = Car(start_pos, car_size, mutation_rate, car_nn_size, start_vel, max_vel, min_vel, rot_vel, acc, 1, scan_length, 5, math.pi)
         cars += (new_car, )
 
     clock = pygame.time.Clock()
