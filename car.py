@@ -187,7 +187,7 @@ class Car:
         length = 0
         x = int(self.center[0] + math.cos(math.pi*2 - (self.angle+angle)) * length)
         y = int(self.center[1] + math.sin(math.pi*2 - (self.angle+angle)) * length)
-
+        
         while not track.get_at((x, y)) == border_color and length < self.scan_length:
             length += 1
             x = int(self.center[0] + math.cos(math.pi*2 - (self.angle+angle)) * length)
