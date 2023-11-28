@@ -16,7 +16,7 @@ keep_weight: whether the car survived or not
 
 class Car:
     def __init__(self, start_pos:tuple, size:tuple, mr:float, nn_size:tuple, start_vel:float, max_vel:float, 
-                 min_vel:float, rot_vel:float, acc:float, bias_term:int,  scan_length:int, num_sensors:int=5, sensor_angle=math.pi) -> None:
+                 min_vel:float, rot_vel:float, acc:float, bias_term:int,  scan_length:int, num_sensors:int=5, sensor_angle=math.pi, dist_type=np.random.uniform, dist_params=(-1, 1)) -> None:
         
         self.start_pos = start_pos
         self.pos = start_pos
@@ -33,17 +33,21 @@ class Car:
         self.scan_length = scan_length
 
         # neural network
-        self.command = np.zeros(4, dtype=bool)
+        self.command = np.zeros(nn_size[-1], dtype=bool)
         self.weights = None
         self.nn_size = nn_size
         self.mr = mr
         self.bias_term = bias_term
-        self.actions = (self.accelerate, self.decelerate, self.turn_left, self.turn_right)
+        self.actions = (self.accelerate, self.turn_left, self.turn_right)
+        self.prev_result = ()
 
         # img
         self.image = pygame.image.load("images/car.png").convert_alpha()
         self.image = pygame.transform.scale(self.image, self.size)
+        self.winner_image = pygame.image.load("images/winner_car.png").convert_alpha()
+        self.winner_image = pygame.transform.scale(self.winner_image, self.size)
         self.sprite_image = self.image.copy()
+        self.current_sprite = self.image.copy()
 
         # values
         self.angle = 0
@@ -61,21 +65,24 @@ class Car:
         self.time = 0
         self.finished = False
 
-        self.init_weight()
+        self.init_weight(distribution_type=dist_type, params=dist_params)
+    
+    def set_mutation_rate(self, mr):
+        self.mr = mr
 
     def return_age(self):
         return self.age
     
     def return_distance(self):
-        if self.finished:
-            return float('inf')
-        else:
-            return self.distance
+        return self.distance
     
     def return_time(self):
-        return self.time
+        if not self.finished:
+            return float('inf')
+        else:
+            return self.time
 
-    def init_weight(self, parent_weight:np.ndarray=None, rand=False):
+    def init_weight(self, parent_weight:np.ndarray=None, rand=False, distribution_type=np.random.uniform, params=(-1, 1), equal=False):
         """
         MODES TO BE DEVELOPED:
         0. Natural Selection: everyone is random, but the top 'n' cars survive
@@ -93,12 +100,15 @@ class Car:
             num_weights = 0
             for i in range(len(self.nn_size)-1):
                 num_weights += (self.nn_size[i]+self.bias_term) * self.nn_size[i+1]
-            self.weights = np.random.uniform(-1, 1, size=(num_weights,))
+            self.weights = distribution_type(*params, size=(num_weights,))
 
         else:
             parent_weight_copy = parent_weight.copy()
             if mode == 1:
-                self.weights = parent_weight_copy+(np.random.uniform(-1, 1, size=parent_weight_copy.shape) * self.mr)
+                if equal:
+                    self.weights = parent_weight_copy
+                else:
+                    self.weights = parent_weight_copy+(distribution_type(*params, size=parent_weight_copy.shape) * self.mr)
             
     def draw(self, win):
         rect = self.image.get_rect(center=self.sprite_image.get_rect(topleft=self.pos).center)
@@ -133,17 +143,16 @@ class Car:
         self.time +=1
         self.distance += self.vel
 
-    def accelerate(self):
-        self.vel = min(self.vel + self.acceleration, self.max_vel)
-        
-    def decelerate(self):
-        self.vel = max(self.vel - self.acceleration, self.min_vel)
+    def accelerate(self, value):
+        self.vel = max(min(self.vel + (value-0.5)*self.acceleration, self.max_vel), self.min_vel)
 
-    def turn_left(self):
-        self.angle += self.rotation_vel
+    def turn_left(self, value):
+        if value:
+            self.angle += self.rotation_vel
 
-    def turn_right(self):
-        self.angle -= self.rotation_vel
+    def turn_right(self, value):
+        if value:
+            self.angle -= self.rotation_vel
 
     def update_corners(self):
         length = self.size[0]/2
@@ -180,7 +189,7 @@ class Car:
                 break
             elif track.get_at((int(corner[0]), int(corner[1]))) == finish_color:
                 self.alive = False
-                self.finish = True
+                self.finished = True
                 break
     
     def check_sensors(self, angle:int, track:pygame.SurfaceType, border_color:tuple, index:int):
@@ -198,12 +207,15 @@ class Car:
         self.sensors_pos[1][index] = y
 
     def forward_prop(self):
+        self.prev_result = ()
         out = np.array((self.sensors_dist,))
+        out /= self.scan_length
         idx = 0
 
         for i in range(len(self.nn_size)-1):
             if self.bias_term:
                 inp = np.concatenate((self.one, out), axis=1)
+            self.prev_result+=(inp,)
             weight_shape = ((self.nn_size[i]+self.bias_term), self.nn_size[i+1])
             num_weights = np.prod(weight_shape)
             weight = self.weights[idx:idx+num_weights]
@@ -212,10 +224,16 @@ class Car:
             out = tools.sig(out)
             idx += num_weights
         
-        result = (out > 0.5)
-        self.command[:] = result[:]
+        results = np.around(out.flatten(), 2)
+        results[1:] = results[1:]>0.5
+        results = np.array([results])
+        self.prev_result+=(results,)
+        self.command = results.astype('float64')
 
-    def update(self, win, track, border_color, finish_color, show_radar:bool):
+    def get_nn(self):
+        return self.prev_result
+
+    def update(self, win, track, border_color, finish_color):
         if self.alive:
             # check sensors
             for idx, angle in self.sensor_angles:
@@ -224,31 +242,28 @@ class Car:
             # forward prop
             self.forward_prop()
             # perform action
-            for i in range(len(self.command)):
-                if self.command[i]:
-                    self.actions[i]()
+            for i in range(len(self.command[0])): 
+                self.actions[i](self.command[0][i])
             
             self.update_center_pos()
             # move
             self.move(track, border_color, finish_color)
 
             # update variables
-            self.image = pygame.transform.rotate(self.sprite_image, math.degrees(self.angle))
+            self.image = pygame.transform.rotate(self.current_sprite, math.degrees(self.angle))
 
-            # draw radar
-            if show_radar:
-                self.draw_radar(win)
-        
-        self.draw(win)
-
-    def reset(self, eliminate=False, parent_weight=None):
+    def reset(self, eliminate=False, parent_weight=None, distribution_type=np.random.uniform, dist_params=(-1, 1)):
         self.pos = self.start_pos
         self.update_center_pos()
         if not eliminate:
             self.age += 1
+            self.image = self.winner_image.copy()
+            self.current_sprite = self.winner_image.copy()
         else:
             self.age = 0
-            self.init_weight(parent_weight)
+            self.init_weight(parent_weight, distribution_type=distribution_type, params=dist_params)
+            self.image = self.sprite_image.copy()
+            self.current_sprite = self.sprite_image.copy()
 
         self.angle = 0
         self.vel = self.start_vel
